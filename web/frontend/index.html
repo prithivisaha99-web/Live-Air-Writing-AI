@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Live Air Writing AI - Web</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/landing.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B0F17">
+</head>
+<body>
+  <!-- Futuristic 3D Landing Page Overlay -->
+  <div id="landing-overlay">
+    <div id="canvas-3d-landing"></div>
+    <div class="landing-content-card">
+      <div class="author-badge"><span>PRITHIBI SAHA</span></div>
+      <h1 class="landing-title">LIVE AIR WRITING AI</h1>
+      <p class="landing-tagline">"Write in the air. Let AI understand."</p>
+
+      <div class="landing-3d-visual-box">
+        <div class="visual-ring-glow"></div>
+        <div class="visual-icon-center">✨</div>
+      </div>
+
+      <button id="btn-start-app" class="btn-start-landing">
+        <span>START 🚀</span>
+      </button>
+
+      <div class="landing-footer">
+        AIR WRITING &bull; HAND TRACKING &bull; GEMINI AI ASSIST
+      </div>
+    </div>
+  </div>
+
+  <div id="app" class="app-container">
+    <!-- Top Glassmorphic Navigation Header -->
+    <header class="header-card">
+      <div class="brand-title">LIVE AIR WRITING AI</div>
+      
+      <div class="header-status-box">
+        <span id="lbl-cam-status" class="status-item cam-ready">Camera: Stopped</span>
+        <span id="lbl-hand-count" class="status-item hand-off">Hands: 0</span>
+        <span id="lbl-fingertip-pos" class="status-item">Index: (0, 0)</span>
+        <span id="lbl-fps" class="status-item fps-badge">FPS: 0.0</span>
+        <span id="lbl-gesture-status" class="gesture-badge">GESTURE: NO HAND</span>
+      </div>
+
+      <div class="header-actions">
+        <button id="btn-toggle-cam" class="btn-action" title="Start or Stop Browser Webcam">📹 Start Camera</button>
+        <button id="btn-export-png" class="btn-action" title="Export air drawing as PNG">💾 Export PNG</button>
+        <button id="btn-settings" class="btn-action" title="Configure web app preferences">⚙️ Settings</button>
+      </div>
+    </header>
+
+    <!-- Central Responsive Workspace (Two-column on Desktop, Single-column on Mobile) -->
+    <main class="workspace-container">
+      <!-- Left Column: Camera & Air Writing Canvas -->
+      <section class="canvas-workspace-card">
+        <div class="viewport-wrapper" id="viewport-wrapper">
+          <!-- Webcam Video Feed -->
+          <video id="webcam-video" autoplay playsinline muted></video>
+
+          <!-- Drawing Canvas Overlay -->
+          <canvas id="air-canvas"></canvas>
+
+          <!-- On-Screen Diagnostic HUD Overlay -->
+          <div id="diagnostic-hud" class="diagnostic-hud">
+            <div class="hud-line"><span class="hud-label">Index:</span> <span id="hud-idx-state" class="hud-val red">NONE</span></div>
+            <div class="hud-line"><span class="hud-label">Middle:</span> <span id="hud-mid-state" class="hud-val red">NONE</span></div>
+            <div class="hud-line"><span class="hud-label">Ring:</span> <span id="hud-rng-state" class="hud-val red">NONE</span></div>
+            <div class="hud-line"><span class="hud-label">Pinky:</span> <span id="hud-pnk-state" class="hud-val red">NONE</span></div>
+            <div class="hud-line"><span class="hud-label">Gesture:</span> <span id="hud-gesture" class="hud-val yellow">NO HAND</span></div>
+            <div class="hud-line"><span class="hud-label">Drawing Active:</span> <span id="hud-is-drawing" class="hud-val red">false</span></div>
+            <div class="hud-line"><span class="hud-label">Active Stroke Pts:</span> <span id="hud-stroke-pts" class="hud-val cyan">0</span></div>
+            <div class="hud-line"><span class="hud-label">FPS:</span> <span id="hud-fps" class="hud-val purple">0.0</span></div>
+          </div>
+        </div>
+
+        <!-- Bottom Floating Drawing Toolbar -->
+        <div class="drawing-toolbar">
+          <!-- Color Palette Presets -->
+          <div class="toolbar-section colors-box">
+            <button class="color-btn active" data-color="#00F0FF" style="background-color: #00F0FF;" title="Neon Cyan"></button>
+            <button class="color-btn" data-color="#A855F7" style="background-color: #A855F7;" title="Electric Purple"></button>
+            <button class="color-btn" data-color="#10B981" style="background-color: #10B981;" title="Neon Green"></button>
+            <button class="color-btn" data-color="#FFE600" style="background-color: #FFE600;" title="Vibrant Yellow"></button>
+            <button class="color-btn" data-color="#FF007F" style="background-color: #FF007F;" title="Hot Pink"></button>
+            <button class="color-btn" data-color="#FF334B" style="background-color: #FF334B;" title="Bright Red"></button>
+            <button class="color-btn" data-color="#FFFFFF" style="background-color: #FFFFFF;" title="Pure White"></button>
+            <button class="color-btn" data-color="#000000" style="background-color: #000000;" title="Deep Black"></button>
+            <input type="color" id="picker-custom-color" value="#00F0FF" title="Custom Color Picker" class="color-picker-input">
+          </div>
+
+          <div class="toolbar-sep"></div>
+
+          <!-- Brush Size Control -->
+          <div class="toolbar-section brush-size-box">
+            <span class="toolbar-label">Size:</span>
+            <input type="range" id="slider-brush-size" min="2" max="40" value="8" class="tool-slider">
+            <span id="lbl-brush-size" class="size-val">8px</span>
+            <div id="brush-preview" class="brush-preview"></div>
+          </div>
+
+          <div class="toolbar-sep"></div>
+
+          <!-- Mode Controls -->
+          <div class="toolbar-section mode-box">
+            <button id="btn-toggle-eraser" class="tool-btn">🧹 Eraser</button>
+            <select id="select-canvas-mode" class="tool-select">
+              <option value="camera">Camera Workspace</option>
+              <option value="dark">Dark Canvas</option>
+              <option value="light">Light Canvas</option>
+            </select>
+          </div>
+
+          <div class="toolbar-sep"></div>
+
+          <!-- Action Buttons -->
+          <div class="toolbar-section action-box">
+            <button id="btn-undo" class="tool-btn" disabled>↩️ Undo</button>
+            <button id="btn-redo" class="tool-btn" disabled>↪️ Redo</button>
+            <button id="btn-clear" class="tool-btn btn-danger">🗑️ Clear</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: AI Assist Panel -->
+      <aside class="ai-panel-card">
+        <div class="ai-header">
+          <div class="ai-title">🤖 AI ASSIST</div>
+          <span id="lbl-api-status" class="api-status-badge badge-missing">API Key Missing</span>
+        </div>
+
+        <!-- Indeterminate Progress Bar -->
+        <div id="ai-progress-bar" class="progress-bar-container hidden">
+          <div class="progress-bar-chunk"></div>
+        </div>
+
+        <!-- AI Action Buttons -->
+        <div class="ai-btn-group">
+          <button id="btn-ai-recognize" class="btn-ai">👁️ Recognize Writing</button>
+          <button id="btn-ai-analyze-scene" class="btn-ai">🔍 Analyze Scene</button>
+          <button id="btn-ai-clean" class="btn-ai">✍️ Clean Fix Text</button>
+          <button id="btn-ai-summarize" class="btn-ai">📝 Summarize Notes</button>
+          <button id="btn-ai-copy" class="btn-ai">📋 Copy Text</button>
+        </div>
+
+        <!-- Transcribed & AI Result Output Textarea -->
+        <textarea id="txt-ai-output" class="ai-output-area" placeholder="Transcribed or processed AI text will appear here..."></textarea>
+      </aside>
+    </main>
+
+    <!-- Settings Dialog Modal -->
+    <div id="settings-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>⚙️ Web Preferences</h2>
+          <button id="btn-close-modal" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="select-camera-input">Select Camera:</label>
+            <select id="select-camera-input" class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="chk-mirror-camera" checked> Mirror Camera Feed Horizontally
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-save-settings" class="btn-primary">Save & Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="js/landing.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

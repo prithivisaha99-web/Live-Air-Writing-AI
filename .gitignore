@@ -1,0 +1,15 @@
+# Environment files
+.env
+*.env
+web/backend/.env
+
+# Python bytecode & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+venv312/
+
+# Drawings & temporary files
+saved_drawings/
+.DS_Store

@@ -1,0 +1,10 @@
+{
+  "name": "Live Air Writing AI",
+  "short_name": "Air Writing",
+  "description": "Browser-based air writing application powered by MediaPipe and Gemini AI.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F17",
+  "theme_color": "#0B0F17",
+  "icons": []
+}

@@ -1,0 +1,210 @@
+/* Futuristic 3D Landing Page Stylesheet - Live Air Writing AI */
+
+#landing-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle at center, #111827 0%, #0B0F17 100%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: #F3F4F6;
+  opacity: 1;
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#landing-overlay.fade-out {
+  opacity: 0;
+  transform: scale(1.06);
+  pointer-events: none;
+}
+
+/* Background 3D & Particle Canvas */
+#canvas-3d-landing {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Glassmorphic Landing Card Container */
+.landing-content-card {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2.5rem 3rem;
+  max-width: 650px;
+  width: 90%;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6),
+              0 0 40px rgba(0, 240, 255, 0.15),
+              inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Author Badge */
+.author-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1.1rem;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 50px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #00F0FF;
+  text-transform: uppercase;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+}
+
+/* Project Main Title */
+.landing-title {
+  font-size: 2.8rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin: 0 0 0.8rem 0;
+  background: linear-gradient(135deg, #FFFFFF 0%, #00F0FF 50%, #A855F7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+  line-height: 1.15;
+}
+
+/* Tagline */
+.landing-tagline {
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: #9CA3AF;
+  margin-bottom: 2.2rem;
+  font-style: italic;
+}
+
+/* 3D Visual Center Ornament */
+.landing-3d-visual-box {
+  width: 140px;
+  height: 140px;
+  margin-bottom: 1.8rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.visual-ring-glow {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 240, 255, 0.4);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.3), inset 0 0 20px rgba(168, 85, 247, 0.2);
+  animation: spinGlow 12s linear infinite;
+}
+
+.visual-icon-center {
+  font-size: 3.5rem;
+  filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.8));
+  animation: floatIcon 3s ease-in-out infinite;
+}
+
+@keyframes spinGlow {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.05); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes floatIcon {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Start CTA Button */
+.btn-start-landing {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 3.2rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #0B0F17;
+  background: linear-gradient(135deg, #00F0FF 0%, #38BDF8 50%, #A855F7 100%);
+  background-size: 200% 200%;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.5), 0 10px 20px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  text-transform: uppercase;
+}
+
+.btn-start-landing:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.8), 0 15px 30px rgba(0, 0, 0, 0.5);
+  background-position: 100% 0;
+}
+
+.btn-start-landing:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+}
+
+/* Footer Credits */
+.landing-footer {
+  margin-top: 2rem;
+  font-size: 0.8rem;
+  color: #6B7280;
+  letter-spacing: 1px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 640px) {
+  .landing-content-card {
+    padding: 2rem 1.5rem;
+    max-width: 92%;
+  }
+
+  .landing-title {
+    font-size: 2rem;
+  }
+
+  .landing-tagline {
+    font-size: 1rem;
+    margin-bottom: 1.8rem;
+  }
+
+  .btn-start-landing {
+    padding: 0.85rem 2.5rem;
+    font-size: 1.05rem;
+    width: 100%;
+  }
+
+  .landing-3d-visual-box {
+    width: 110px;
+    height: 110px;
+    margin-bottom: 1.5rem;
+  }
+
+  .visual-icon-center {
+    font-size: 2.8rem;
+  }
+}

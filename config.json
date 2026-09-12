@@ -1,0 +1,18 @@
+{
+    "camera_index": 0,
+    "camera_resolution": [
+        1280,
+        720
+    ],
+    "camera_flip_h": true,
+    "draw_skeleton": true,
+    "gesture_mode": "Pointing Index Finger",
+    "gesture_sensitivity": 35.0,
+    "smoothing_factor": 0.4,
+    "brush_color": "#00F0FF",
+    "brush_size": 8,
+    "eraser_size": 30,
+    "canvas_mode": "Camera Workspace",
+    "openai_api_key": "",
+    "openai_model": "gpt-4o-mini"
+}
