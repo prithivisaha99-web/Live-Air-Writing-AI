@@ -192,6 +192,51 @@ async def analyze_scene(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
+class ChatHistoryItem(BaseModel):
+    role: str = Field(..., description="'user' or 'assistant'")
+    content: str = Field(..., description="Message text")
+
+
+class ChatWritingRequest(BaseModel):
+    writing: Optional[str] = ""
+    description: Optional[str] = ""
+    question: str = Field(..., min_length=1, description="Question asked by the user")
+    history: Optional[list[ChatHistoryItem]] = []
+
+
+class ChatWritingResponse(BaseModel):
+    answer: str
+
+
+@app.post("/api/chat-writing", response_model=ChatWritingResponse)
+def chat_writing(req: ChatWritingRequest):
+    """Answer questions about the active air writing context using Gemini."""
+    if not req.question or not req.question.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Question is required and cannot be empty."
+        )
+
+    try:
+        history_list = [h.model_dump() for h in req.history] if req.history else []
+        answer = ai_service.chat_writing(
+            writing=req.writing or "",
+            description=req.description or "",
+            question=req.question,
+            history=history_list
+        )
+        return ChatWritingResponse(answer=answer)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except RuntimeError as re:
+        err_str = str(re).lower()
+        if "quota" in err_str or "rate limit" in err_str:
+            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(re))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(re))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
 # ----------------------------------------------------
 # Static Files & Frontend Mount (Mounted after API routes)
 # ----------------------------------------------------

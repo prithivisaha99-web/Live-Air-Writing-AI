@@ -41,17 +41,21 @@ class UndoRedoManager(QObject):
 
     def undo(self) -> VectorStroke | None:
         if not self._history:
+            logger.info("[ShortcutDebug] undo_called -> history is empty, returning None")
             return None
         stroke = self._history.pop()
         self._redo_stack.append(stroke)
+        logger.info(f"[ShortcutDebug] undo_called -> popped stroke with {len(stroke.points)} points. Remaining history={len(self._history)}")
         self._notify_state()
         return stroke
 
     def redo(self) -> VectorStroke | None:
         if not self._redo_stack:
+            logger.info("[ShortcutDebug] redo_called -> redo stack is empty, returning None")
             return None
         stroke = self._redo_stack.pop()
         self._history.append(stroke)
+        logger.info(f"[ShortcutDebug] redo_called -> restored stroke with {len(stroke.points)} points. History={len(self._history)}")
         self._notify_state()
         return stroke
 

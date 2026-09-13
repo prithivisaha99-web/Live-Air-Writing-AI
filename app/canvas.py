@@ -69,12 +69,18 @@ class AirWritingCanvas(QWidget):
 
     def set_diagnostic_info(self, info: dict) -> None:
         """Update live diagnostic overlay metrics."""
+        raw_shortcut = info.get("raw_shortcut")
+        shortcut_str = raw_shortcut.value if hasattr(raw_shortcut, "value") else str(raw_shortcut or "NONE")
         finger_states = info.get("finger_states", {})
+        shortcut_diag = info.get("shortcut_diag", {})
+
         self.diag_info = {
             "hand_count": info.get("hand_count", 0),
             "raw_index": info.get("raw_index"),
             "smooth_index": info.get("smooth_index"),
             "gesture": info.get("gesture").value if hasattr(info.get("gesture"), "value") else str(info.get("gesture", "NO HAND")),
+            "shortcut": shortcut_str,
+            "shortcut_diag": shortcut_diag,
             "is_drawing": bool(info.get("is_drawing", False)),
             "raw_count": info.get("raw_count", 0),
             "interp_count": info.get("interp_count", 0),
@@ -282,7 +288,7 @@ class AirWritingCanvas(QWidget):
 
     def _draw_diagnostic_hud(self, painter: QPainter) -> None:
         """Render live diagnostic stats block on top-left of canvas."""
-        hud_w, hud_h = 240, 240
+        hud_w, hud_h = 240, 280
         padding = 12
         x, y = 16, 16
 
@@ -300,6 +306,7 @@ class AirWritingCanvas(QWidget):
         painter.setFont(font)
 
         gesture = self.diag_info["gesture"]
+        shortcut = self.diag_info.get("shortcut", "NONE")
         is_drawing = self.diag_info["is_drawing"]
         fps = self.diag_info["fps"]
 
@@ -312,12 +319,18 @@ class AirWritingCanvas(QWidget):
         rng_st = self.diag_info.get("ring_state", "NONE")
         pnk_st = self.diag_info.get("pinky_state", "NONE")
 
+        shortcut_diag = self.diag_info.get("shortcut_diag", {})
+        shortcut_reason = shortcut_diag.get("reason", "None")
+        shortcut_stable = shortcut_diag.get("stable_frames", "0/4")
+
         lines = [
             ("Index:", f"{idx_st}", QColor("#10B981") if idx_st == "EXTENDED" else QColor("#EF4444")),
             ("Middle:", f"{mid_st}", QColor("#10B981") if mid_st == "EXTENDED" else QColor("#EF4444")),
             ("Ring:", f"{rng_st}", QColor("#10B981") if rng_st == "EXTENDED" else QColor("#EF4444")),
             ("Pinky:", f"{pnk_st}", QColor("#10B981") if pnk_st == "EXTENDED" else QColor("#EF4444")),
             ("Gesture:", f"{gesture}", QColor("#F59E0B") if gesture == "DRAW" else (QColor("#EC4899") if gesture == "ERASER" else QColor("#38BDF8"))),
+            ("Shortcut:", f"{shortcut} [{shortcut_stable}]", QColor("#00F0FF") if shortcut != "NONE" else QColor("#64748B")),
+            ("Shortcut Info:", f"{shortcut_reason[:15]}", QColor("#38BDF8")),
             ("Drawing Active:", f"{is_drawing}", QColor("#10B981") if is_drawing else QColor("#EF4444")),
             ("Raw/Frame:", f"{raw_cnt}", QColor("#38BDF8")),
             ("Interp/Frame:", f"{interp_cnt}", QColor("#38BDF8")),

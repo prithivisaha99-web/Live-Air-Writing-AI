@@ -7,7 +7,7 @@ import numpy as np
 from PySide6.QtCore import QThread, Signal, Slot, QMutex, QMutexLocker
 
 from app.hand_tracking import HandTracker
-from app.gesture_detection import GestureDetector, GestureType, GestureMode
+from app.gesture_detection import GestureDetector, GestureType, GestureMode, ShortcutDetector, ShortcutGesture
 from app.air_writing import AirWritingEngine
 
 logger = logging.getLogger(__name__)
@@ -56,9 +56,10 @@ class VisionWorkerThread(QThread):
         self.height = height
         self.flip_h = flip_h
 
-        # Initialize HandTracker, GestureDetector, AirWritingEngine ONCE
+        # Initialize HandTracker, GestureDetector, ShortcutDetector, AirWritingEngine ONCE
         self.hand_tracker = HandTracker(draw_skeleton=draw_skeleton)
         self.gesture_detector = GestureDetector(mode=gesture_mode)
+        self.shortcut_detector = ShortcutDetector(debounce_frames=4)
         self.air_engine = AirWritingEngine(smoothing_factor=smoothing_factor)
 
         self._running = False
@@ -177,6 +178,7 @@ class VisionWorkerThread(QThread):
             # 2. Gesture Detection & Finger States Diagnostic
             gesture = self.gesture_detector.update(hand_data)
             finger_states = self.gesture_detector.get_finger_states(hand_data)
+            eval_data = self.gesture_detector.evaluate_all_fingers(hand_data)
 
             # 3. Extract normalized index fingertip coordinates
             raw_norm_pt = None
@@ -190,6 +192,14 @@ class VisionWorkerThread(QThread):
             finished_stroke, new_points, is_currently_drawing, smooth_norm_pt, interp_count = self.air_engine.process_point(
                 raw_norm_pt, frame_size, is_drawing_gesture
             )
+
+            # 4. Process Shortcut Gestures (debounced & latched, disabled while drawing)
+            triggered_shortcut = self.shortcut_detector.update(hand_data, eval_data, is_drawing=is_currently_drawing)
+            raw_shortcut, _, _ = self.shortcut_detector.detect_raw_shortcut(hand_data, eval_data)
+            shortcut_diag = self.shortcut_detector.get_diagnostic_info()
+
+            if triggered_shortcut is not None:
+                logger.info(f"[ShortcutDebug] TRIGGERED={triggered_shortcut.name} signal_emitted={triggered_shortcut.name}")
 
             raw_count = 1 if raw_norm_pt is not None else 0
             active_stroke_pts = len(self.air_engine.current_stroke_points)
@@ -205,13 +215,18 @@ class VisionWorkerThread(QThread):
                     f"[StrokeTrace] Raw pts/frame: {raw_count} | Interp pts/frame: {interp_count} | "
                     f"Active stroke points: {active_stroke_pts} | Gesture: {gesture.name}"
                 )
+                if raw_shortcut != ShortcutGesture.NONE:
+                    logger.info(f"[ShortcutDebug] candidate={raw_shortcut.name} stable={shortcut_diag.get('stable_frames')}")
 
-            # 4. Emit processed result package to Qt GUI thread
+            # 5. Emit processed result package to Qt GUI thread
             self.frame_processed.emit({
                 "frame": skeleton_frame,
                 "hand_data": hand_data,
                 "hand_count": hand_count,
                 "gesture": gesture,
+                "triggered_shortcut": triggered_shortcut,
+                "raw_shortcut": raw_shortcut,
+                "shortcut_diag": shortcut_diag,
                 "finger_states": finger_states,
                 "raw_index": raw_norm_pt,
                 "smooth_index": smooth_norm_pt,

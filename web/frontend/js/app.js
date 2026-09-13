@@ -57,19 +57,28 @@ function initApp() {
   const selectCameraInput = document.getElementById('select-camera-input');
   const chkMirrorCamera = document.getElementById('chk-mirror-camera');
 
-  // DOM Element References - AI Assist Panel
+  // DOM Element References - AI Assist Panel & Writing Chat
   const btnAiRecognize = document.getElementById('btn-ai-recognize');
   const btnAiAnalyzeScene = document.getElementById('btn-ai-analyze-scene');
   const btnAiClean = document.getElementById('btn-ai-clean');
   const btnAiSummarize = document.getElementById('btn-ai-summarize');
   const btnAiCopy = document.getElementById('btn-ai-copy');
-  const txtAiOutput = document.getElementById('txt-ai-output');
   const lblApiStatus = document.getElementById('lbl-api-status');
   const aiProgressBar = document.getElementById('ai-progress-bar');
+
+  const lblContextWriting = document.getElementById('lbl-context-writing');
+  const lblContextDesc = document.getElementById('lbl-context-desc');
+  const chatDisplayArea = document.getElementById('chat-display-area');
+  const txtChatInput = document.getElementById('txt-chat-input');
+  const btnChatSend = document.getElementById('btn-chat-send');
 
   let activeColor = '#00F0FF';
   let brushSize = 8;
   let isEraserActive = false;
+
+  let currentWriting = '';
+  let currentDescription = '';
+  let chatHistory = [];
 
   // Initialize Browser Air Canvas
   const airCanvas = new BrowserAirCanvas('air-canvas', {
@@ -149,43 +158,38 @@ function initApp() {
 
     if (hudGesture) {
       hudGesture.textContent = gesture;
-      hudGesture.className = gesture === 'DRAW' ? 'hud-val yellow' : (gesture === 'ERASER' ? 'hud-val purple' : 'hud-val cyan');
+      hudGesture.className = gesture === 'DRAW' ? 'hud-val green' : (gesture === 'ERASER' ? 'hud-val red' : 'hud-val yellow');
     }
 
     if (hudIsDrawing) {
-      hudIsDrawing.textContent = `${isDrawing}`;
+      hudIsDrawing.textContent = isDrawing.toString();
       hudIsDrawing.className = isDrawing ? 'hud-val green' : 'hud-val red';
     }
 
-    if (hudStrokePts) {
-      hudStrokePts.textContent = `${canvasState.strokePointsCount}`;
+    if (hudStrokePts && canvasState) {
+      hudStrokePts.textContent = canvasState.activeStrokeCount.toString();
     }
 
     if (hudFps) {
-      hudFps.textContent = `${fps}`;
+      hudFps.textContent = fps.toString();
     }
   }
 
   function updateHudElement(el, state) {
     if (!el) return;
     el.textContent = state;
-    el.className = state === 'EXTENDED' ? 'hud-val green' : 'hud-val red';
+    el.className = state === 'EXTENDED' ? 'hud-val green' : (state === 'FOLDED' ? 'hud-val red' : 'hud-val yellow');
   }
 
   function resetHudReadouts() {
-    if (lblHandCount) {
-      lblHandCount.textContent = 'Hands: 0';
-      lblHandCount.className = 'status-item hand-off';
-    }
+    if (lblHandCount) { lblHandCount.textContent = 'Hands: 0'; lblHandCount.className = 'status-item hand-off'; }
     if (lblFingertipPos) lblFingertipPos.textContent = 'Index: (0, 0)';
     if (lblFps) lblFps.textContent = 'FPS: 0.0';
     if (lblGestureStatus) lblGestureStatus.textContent = 'GESTURE: NO HAND';
-
     updateHudElement(hudIdxState, 'NONE');
     updateHudElement(hudMidState, 'NONE');
     updateHudElement(hudRngState, 'NONE');
     updateHudElement(hudPnkState, 'NONE');
-
     if (hudGesture) { hudGesture.textContent = 'NO HAND'; hudGesture.className = 'hud-val yellow'; }
     if (hudIsDrawing) { hudIsDrawing.textContent = 'false'; hudIsDrawing.className = 'hud-val red'; }
     if (hudStrokePts) hudStrokePts.textContent = '0';
@@ -199,58 +203,62 @@ function initApp() {
   }
 
   // ----------------------------------------------------
-  // 2. Color Palette & Brush Size Event Handling
+  // 2. Toolbar & Preset Actions
   // ----------------------------------------------------
   colorBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       colorBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeColor = btn.dataset.color;
+      isEraserActive = false;
+      if (btnEraser) btnEraser.classList.remove('active');
       airCanvas.setColor(activeColor);
-      updateBrushPreview(activeColor, brushSize);
-
-      if (isEraserActive) {
-        isEraserActive = false;
-        btnEraser.classList.remove('active');
-      }
+      updateBrushPreview();
     });
   });
 
   if (customColorPicker) {
     customColorPicker.addEventListener('input', (e) => {
-      colorBtns.forEach(b => b.classList.remove('active'));
       activeColor = e.target.value;
+      colorBtns.forEach(b => b.classList.remove('active'));
+      isEraserActive = false;
+      if (btnEraser) btnEraser.classList.remove('active');
       airCanvas.setColor(activeColor);
-      updateBrushPreview(activeColor, brushSize);
+      updateBrushPreview();
     });
   }
 
   if (brushSlider) {
     brushSlider.addEventListener('input', (e) => {
       brushSize = parseInt(e.target.value, 10);
-      lblBrushSize.textContent = `${brushSize}px`;
-      airCanvas.setBrushWidth(brushSize);
-      updateBrushPreview(activeColor, brushSize);
+      if (lblBrushSize) lblBrushSize.textContent = `${brushSize}px`;
+      airCanvas.setLineWidth(brushSize);
+      updateBrushPreview();
     });
   }
 
-  function updateBrushPreview(color, size) {
+  function updateBrushPreview() {
     if (brushPreview) {
-      brushPreview.style.backgroundColor = isEraserActive ? '#0B0F17' : color;
-      const diameter = Math.max(4, Math.min(22, size));
-      brushPreview.style.width = `${diameter}px`;
-      brushPreview.style.height = `${diameter}px`;
+      brushPreview.style.width = `${Math.min(24, Math.max(4, brushSize))}px`;
+      brushPreview.style.height = `${Math.min(24, Math.max(4, brushSize))}px`;
+      brushPreview.style.backgroundColor = isEraserActive ? '#FF334B' : activeColor;
     }
   }
+  updateBrushPreview();
 
   // ----------------------------------------------------
   // 3. Eraser, Canvas Mode & History Actions
   // ----------------------------------------------------
   if (btnEraser) {
     btnEraser.addEventListener('click', () => {
-      isEraserActive = airCanvas.toggleEraser();
+      isEraserActive = !isEraserActive;
       btnEraser.classList.toggle('active', isEraserActive);
-      updateBrushPreview(activeColor, brushSize);
+      if (isEraserActive) {
+        airCanvas.setColor('ERASER');
+      } else {
+        airCanvas.setColor(activeColor);
+      }
+      updateBrushPreview();
     });
   }
 
@@ -274,47 +282,77 @@ function initApp() {
 
   if (btnClear) {
     btnClear.addEventListener('click', () => {
-      airCanvas.clearCanvas();
+      airCanvas.clear();
+      currentWriting = '';
+      currentDescription = '';
+      if (lblContextWriting) lblContextWriting.textContent = 'Writing: (Canvas cleared)';
+      if (lblContextDesc) lblContextDesc.textContent = "Description: Air-write and click 'Recognize Writing' to set context";
     });
   }
 
   if (btnExportPng) {
     btnExportPng.addEventListener('click', () => {
-      airCanvas.exportPNG();
+      airCanvas.exportPNG('air-writing-drawing.png');
     });
   }
 
   // ----------------------------------------------------
-  // 4. Settings Modal Interactivity
+  // 4. Settings Modal Management
   // ----------------------------------------------------
-  if (btnSettings && settingsModal) {
+  if (btnSettings) {
     btnSettings.addEventListener('click', async () => {
-      settingsModal.classList.remove('hidden');
-      if (selectCameraInput) {
-        await cameraManager.enumerateCameras(selectCameraInput);
-      }
+      if (settingsModal) settingsModal.classList.remove('hidden');
+      await populateCameraDeviceList();
     });
   }
 
-  if (btnCloseModal && settingsModal) {
+  if (btnCloseModal) {
     btnCloseModal.addEventListener('click', () => {
-      settingsModal.classList.add('hidden');
+      if (settingsModal) settingsModal.classList.add('hidden');
     });
   }
 
-  if (btnSaveSettings && settingsModal) {
+  if (btnSaveSettings) {
     btnSaveSettings.addEventListener('click', async () => {
-      const selectedCamId = selectCameraInput ? selectCameraInput.value : null;
-      if (selectedCamId && cameraManager.isCameraRunning) {
-        await cameraManager.startCamera(selectedCamId);
-        handTracker.startTracking(cameraManager.videoElement, onHandTrackingResults);
+      const selectedDeviceId = selectCameraInput ? selectCameraInput.value : null;
+      const isMirrored = chkMirrorCamera ? chkMirrorCamera.checked : true;
+
+      cameraManager.setMirrored(isMirrored);
+      airCanvas.setMirrored(isMirrored);
+
+      if (selectedDeviceId && selectedDeviceId !== cameraManager.currentDeviceId) {
+        if (cameraManager.isCameraRunning) {
+          handTracker.stopTracking();
+          const success = await cameraManager.startCamera(selectedDeviceId);
+          if (success) {
+            handTracker.startTracking(cameraManager.videoElement, onHandTrackingResults);
+          }
+        } else {
+          cameraManager.currentDeviceId = selectedDeviceId;
+        }
       }
-      settingsModal.classList.add('hidden');
+
+      if (settingsModal) settingsModal.classList.add('hidden');
+    });
+  }
+
+  async function populateCameraDeviceList() {
+    if (!selectCameraInput) return;
+    const devices = await cameraManager.getVideoDevices();
+    selectCameraInput.innerHTML = '';
+    devices.forEach((device, idx) => {
+      const opt = document.createElement('option');
+      opt.value = device.deviceId;
+      opt.textContent = device.label || `Camera ${idx + 1}`;
+      if (device.deviceId === cameraManager.currentDeviceId) {
+        opt.selected = true;
+      }
+      selectCameraInput.appendChild(opt);
     });
   }
 
   // ----------------------------------------------------
-  // 5. AI Assist API Integration & Actions
+  // 5. AI Assist API Integration & AI Writing Chat
   // ----------------------------------------------------
   const API_BASE = (window.location.protocol === 'http:' || window.location.protocol === 'https:') ? '' : 'http://localhost:8000';
 
@@ -357,7 +395,7 @@ function initApp() {
       if (!response.ok) {
         throw new Error(data.detail || `API request failed with status ${response.status}`);
       }
-      return data.result;
+      return data.result || data.answer || data;
     } finally {
       if (aiProgressBar) aiProgressBar.classList.add('hidden');
     }
@@ -385,19 +423,122 @@ function initApp() {
     return null;
   }
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function appendChatMessage(role, content, isHtml = false) {
+    if (!chatDisplayArea) return null;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.style.marginBottom = '8px';
+
+    const safeContent = isHtml ? content : escapeHtml(content);
+
+    if (role === 'user') {
+      msgDiv.style.textAlign = 'right';
+      msgDiv.innerHTML = `<span style="background: rgba(0,240,255,0.15); color: #00F0FF; padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(0,240,255,0.3);"><b>You:</b> ${safeContent}</span>`;
+    } else if (role === 'assistant') {
+      msgDiv.style.textAlign = 'left';
+      msgDiv.innerHTML = `<span style="background: rgba(168,85,247,0.15); color: #E2E8F0; padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(168,85,247,0.3);"><b style="color: #A855F7;">🤖 AI:</b> ${safeContent}</span>`;
+    } else {
+      msgDiv.style.textAlign = 'center';
+      msgDiv.innerHTML = `<span style="color: #94A3B8; font-size: 10px;">${safeContent}</span>`;
+    }
+
+    chatDisplayArea.appendChild(msgDiv);
+    chatDisplayArea.scrollTop = chatDisplayArea.scrollHeight;
+    return msgDiv;
+  }
+
+  async function sendChatMessage() {
+    const question = txtChatInput ? txtChatInput.value.trim() : '';
+
+    if (!question) {
+      appendChatMessage('assistant', '⚠️ Please type a question before clicking Send.', true);
+      return;
+    }
+
+    const hasContext = Boolean(currentWriting || currentDescription);
+
+    if (!hasContext) {
+      appendChatMessage('user', question);
+      appendChatMessage('assistant', '⚠️ Write something on the canvas and click <b>Recognize Writing</b> first so I can answer questions about it.', true);
+      if (txtChatInput) txtChatInput.value = '';
+      return;
+    }
+
+    // Append user question & clear input
+    appendChatMessage('user', question);
+    if (txtChatInput) txtChatInput.value = '';
+
+    // Disable input controls during API request
+    if (btnChatSend) btnChatSend.disabled = true;
+    if (txtChatInput) txtChatInput.disabled = true;
+
+    const loadingMsgEl = appendChatMessage('assistant', '⌛ AI is thinking...', true);
+
+    try {
+      const payload = {
+        writing: currentWriting,
+        description: currentDescription,
+        question: question,
+        history: [...chatHistory]
+      };
+
+      const responseText = await callAiApi('/api/chat-writing', payload);
+      const answer = typeof responseText === 'string' ? responseText : (responseText.answer || responseText.result || 'No response text');
+
+      if (loadingMsgEl) loadingMsgEl.remove();
+
+      appendChatMessage('assistant', answer, false);
+
+      chatHistory.push({ role: 'user', content: question });
+      chatHistory.push({ role: 'assistant', content: answer });
+    } catch (err) {
+      if (loadingMsgEl) loadingMsgEl.remove();
+      console.error('[Web Chat Error]', err);
+      appendChatMessage('assistant', `❌ ${err.message}`, true);
+    } finally {
+      if (btnChatSend) btnChatSend.disabled = false;
+      if (txtChatInput) txtChatInput.disabled = false;
+      if (txtChatInput) txtChatInput.focus();
+    }
+  }
+
   // 1. Recognize Writing
   if (btnAiRecognize) {
     btnAiRecognize.addEventListener('click', async () => {
       if (!airCanvas || !airCanvas.canvas) return;
 
       try {
-        txtAiOutput.value = '⌛ Transcribing handwritten canvas notes via Gemini AI...';
+        const loadingMsgEl = appendChatMessage('assistant', '⌛ Analyzing handwriting and context with Gemini Vision...', true);
         const dataUrl = airCanvas.canvas.toDataURL('image/png');
         const result = await callAiApi('/api/recognize', { image: dataUrl });
-        txtAiOutput.value = result;
+
+        if (loadingMsgEl) loadingMsgEl.remove();
+
+        const text = typeof result === 'string' ? result : (result.result || result.text || '');
+        currentWriting = text;
+        currentDescription = `Handwritten content: '${text}'`;
+
+        if (lblContextWriting) lblContextWriting.textContent = `Writing: ${currentWriting}`;
+        if (lblContextDesc) lblContextDesc.textContent = `Description: ${currentDescription}`;
+
+        appendChatMessage(
+          'assistant',
+          `Detected: <b>"${escapeHtml(currentWriting)}"</b><br><i style="color:#94A3B8;">Description: ${escapeHtml(currentDescription)}</i><br><br>Ask me any question about your writing below!`,
+          true
+        );
       } catch (err) {
         console.error('[AI Recognize Error]', err);
-        txtAiOutput.value = `❌ ${err.message}`;
+        appendChatMessage('assistant', `❌ ${err.message}`, true);
       }
     });
   }
@@ -407,77 +548,98 @@ function initApp() {
     btnAiAnalyzeScene.addEventListener('click', async () => {
       const frameDataUrl = captureWorkspaceFrame();
       if (!frameDataUrl) {
-        txtAiOutput.value = '⚠️ No active camera stream or canvas image available to analyze.';
+        appendChatMessage('assistant', '⚠️ No active camera stream or canvas image available to analyze.', true);
         return;
       }
 
       try {
-        txtAiOutput.value = '⌛ Analyzing scene & objects via Gemini AI...';
+        const loadingMsgEl = appendChatMessage('assistant', '🔍 Analyzing scene & objects via Gemini AI...', true);
         const result = await callAiApi('/api/analyze-scene', { image: frameDataUrl });
-        txtAiOutput.value = result;
+        if (loadingMsgEl) loadingMsgEl.remove();
+        const text = typeof result === 'string' ? result : (result.result || result.analysis || '');
+        appendChatMessage('assistant', `🔍 <b>Scene Analysis:</b><br>${escapeHtml(text)}`, true);
       } catch (err) {
         console.error('[AI Scene Analysis Error]', err);
-        txtAiOutput.value = `❌ ${err.message}`;
+        appendChatMessage('assistant', `❌ ${err.message}`, true);
       }
     });
   }
 
-  // 2. Clean Fix Text
+  // 3. Clean Fix Text
   if (btnAiClean) {
     btnAiClean.addEventListener('click', async () => {
-      const currentText = txtAiOutput ? txtAiOutput.value.trim() : '';
-      if (!currentText || currentText.startsWith('❌') || currentText.startsWith('⚠️') || currentText.startsWith('⌛')) {
-        txtAiOutput.value = '⚠️ Please recognize or enter valid text first before cleaning.';
+      if (!currentWriting) {
+        appendChatMessage('assistant', '⚠️ Please recognize writing first before cleaning.', true);
         return;
       }
 
       try {
-        txtAiOutput.value = '⌛ Cleaning and formatting text via Gemini AI...';
-        const result = await callAiApi('/api/clean', { text: currentText });
-        txtAiOutput.value = result;
+        const loadingMsgEl = appendChatMessage('assistant', '⌛ Cleaning and formatting text via Gemini AI...', true);
+        const result = await callAiApi('/api/clean', { text: currentWriting });
+        if (loadingMsgEl) loadingMsgEl.remove();
+        const text = typeof result === 'string' ? result : (result.result || result.text || currentWriting);
+        currentWriting = text;
+        if (lblContextWriting) lblContextWriting.textContent = `Writing: ${currentWriting}`;
+        appendChatMessage('assistant', `✍️ <b>Cleaned Text:</b><br>${escapeHtml(currentWriting)}`, true);
       } catch (err) {
         console.error('[AI Clean Error]', err);
-        txtAiOutput.value = `❌ ${err.message}`;
+        appendChatMessage('assistant', `❌ ${err.message}`, true);
       }
     });
   }
 
-  // 3. Summarize Notes
+  // 4. Summarize Notes
   if (btnAiSummarize) {
     btnAiSummarize.addEventListener('click', async () => {
-      const currentText = txtAiOutput ? txtAiOutput.value.trim() : '';
-      if (!currentText || currentText.startsWith('❌') || currentText.startsWith('⚠️') || currentText.startsWith('⌛')) {
-        txtAiOutput.value = '⚠️ Please recognize or enter valid text first before summarizing.';
+      if (!currentWriting) {
+        appendChatMessage('assistant', '⚠️ Please recognize writing first before summarizing.', true);
         return;
       }
 
       try {
-        txtAiOutput.value = '⌛ Summarizing notes via Gemini AI...';
-        const result = await callAiApi('/api/summarize', { text: currentText });
-        txtAiOutput.value = result;
+        const loadingMsgEl = appendChatMessage('assistant', '⌛ Summarizing notes via Gemini AI...', true);
+        const result = await callAiApi('/api/summarize', { text: currentWriting });
+        if (loadingMsgEl) loadingMsgEl.remove();
+        const text = typeof result === 'string' ? result : (result.result || result.summary || currentWriting);
+        appendChatMessage('assistant', `📝 <b>Summary:</b><br>${escapeHtml(text)}`, true);
       } catch (err) {
         console.error('[AI Summarize Error]', err);
-        txtAiOutput.value = `❌ ${err.message}`;
+        appendChatMessage('assistant', `❌ ${err.message}`, true);
       }
     });
   }
 
-  // 4. Clipboard Copy
-  if (btnAiCopy && txtAiOutput) {
+  // 5. Clipboard Copy
+  if (btnAiCopy) {
     btnAiCopy.addEventListener('click', () => {
-      const text = txtAiOutput.value.trim();
-      if (!text || text.startsWith('❌') || text.startsWith('⚠️') || text.startsWith('⌛')) {
+      if (!currentWriting) {
         btnAiCopy.textContent = '⚠️ No Text to Copy';
         setTimeout(() => { btnAiCopy.textContent = '📋 Copy Text'; }, 1500);
         return;
       }
 
-      navigator.clipboard.writeText(text).then(() => {
+      navigator.clipboard.writeText(currentWriting).then(() => {
         btnAiCopy.textContent = '✅ Copied!';
         setTimeout(() => { btnAiCopy.textContent = '📋 Copy Text'; }, 1500);
       }).catch(err => {
         console.error('Clipboard copy failed:', err);
       });
+    });
+  }
+
+  // 6. Chat Input & Send Button Event Listeners
+  if (btnChatSend) {
+    btnChatSend.addEventListener('click', () => {
+      sendChatMessage();
+    });
+  }
+
+  if (txtChatInput) {
+    txtChatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendChatMessage();
+      }
     });
   }
 }

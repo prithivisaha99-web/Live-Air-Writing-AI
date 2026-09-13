@@ -59,6 +59,20 @@ class TestCanvasColorPersistence(unittest.TestCase):
         self.assertEqual(len(self.mgr.history), 1)
         self.assertEqual(self.mgr.history[0].color, selected_color)
 
+    def test_set_diagnostic_info_safely_handles_payload(self):
+        info = {
+            "hand_count": 1,
+            "raw_shortcut": "✌️ UNDO",
+            "gesture": "HOVER",
+            "finger_states": {"Index": "EXTENDED", "Middle": "EXTENDED", "Ring": "FOLDED", "Pinky": "FOLDED"},
+            "shortcut_diag": {"reason": "✌️ Two-finger pose", "stable_frames": "4/4"}
+        }
+        self.canvas.set_diagnostic_info(info)
+        self.assertEqual(self.canvas.diag_info["index_state"], "EXTENDED")
+        self.assertEqual(self.canvas.diag_info["middle_state"], "EXTENDED")
+        self.assertEqual(self.canvas.diag_info["ring_state"], "FOLDED")
+        self.assertEqual(self.canvas.diag_info["pinky_state"], "FOLDED")
+
 
 if __name__ == "__main__":
     unittest.main()

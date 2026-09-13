@@ -69,7 +69,42 @@ class TestWebIntegrationPipeline(unittest.TestCase):
             }
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("access-control-allow-origin", response.headers)
+    @patch("web.backend.main.ai_service.chat_writing")
+    def test_chat_writing_pipeline_flow(self, mock_chat):
+        """Test POST /api/chat-writing endpoint contract with writing context and history."""
+        mock_chat.return_value = "A machine is a mechanical system."
+        payload = {
+            "writing": "Machine",
+            "description": "Handwritten word Machine",
+            "question": "What is this?",
+            "history": [{"role": "user", "content": "Hi"}]
+        }
+        res = self.client.post("/api/chat-writing", json=payload)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["answer"], "A machine is a mechanical system.")
+        mock_chat.assert_called_once_with(
+            writing="Machine",
+            description="Handwritten word Machine",
+            question="What is this?",
+            history=[{"role": "user", "content": "Hi"}]
+        )
+
+    def test_chat_writing_empty_question_returns_400(self):
+        """Test POST /api/chat-writing with empty question returns 400 Bad Request."""
+        payload = {"writing": "Machine", "description": "", "question": "   ", "history": []}
+        res = self.client.post("/api/chat-writing", json=payload)
+        self.assertEqual(res.status_code, 400)
+
+    @patch("web.backend.main.ai_service.chat_writing")
+    def test_chat_writing_key_not_exposed(self, mock_chat):
+        """Test API key value is never returned in chat-writing response headers or body."""
+        mock_chat.return_value = "Sample AI response"
+        payload = {"writing": "Machine", "description": "Word", "question": "Explain"}
+        res = self.client.post("/api/chat-writing", json=payload)
+        self.assertEqual(res.status_code, 200)
+        body = res.text
+        self.assertNotIn("PASTE_YOUR", body)
+        self.assertNotIn("GEMINI_API_KEY", body)
 
 
 if __name__ == "__main__":

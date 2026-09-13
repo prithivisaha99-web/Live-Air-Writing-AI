@@ -150,3 +150,51 @@ class WebAIService:
                 raise ValueError("Invalid or unauthorized Gemini API key.")
             else:
                 raise RuntimeError(f"Gemini API request failed: {e}")
+
+    def chat_writing(self, writing: str = "", description: str = "", question: str = "", history: list[dict] = None) -> str:
+        """Answer user questions using current writing context and multi-turn chat history."""
+        q_clean = (question or "").strip()
+        if not q_clean:
+            raise ValueError("Question cannot be empty.")
+
+        client = self._get_client()
+        prompt_parts = []
+        prompt_parts.append(
+            "You are Live Air Writing AI, an intelligent assistant. Answer the user's question clearly and accurately."
+        )
+        if writing or description:
+            prompt_parts.append("\n=== CURRENT WRITING CONTEXT ===")
+            if writing:
+                prompt_parts.append(f"Recognized Writing: {writing}")
+            if description:
+                prompt_parts.append(f"Description: {description}")
+            prompt_parts.append("===============================\n")
+        else:
+            prompt_parts.append("\nNote: No active handwriting content provided on canvas.\n")
+
+        if history:
+            prompt_parts.append("=== CONVERSATION HISTORY ===")
+            for item in history:
+                role = "User" if item.get("role") == "user" else "Assistant"
+                prompt_parts.append(f"{role}: {item.get('content', '')}")
+            prompt_parts.append("============================\n")
+
+        prompt_parts.append(f"User Question: {q_clean}")
+        full_prompt = "\n".join(prompt_parts)
+
+        try:
+            response = client.models.generate_content(
+                model=self.model_name,
+                contents=full_prompt
+            )
+            result = (response.text or "").strip()
+            return result if result else "I apologize, but I could not generate an answer."
+        except Exception as e:
+            logger.error(f"[Gemini API Error] chat_writing failed: {e}")
+            err_str = str(e).lower()
+            if "quota" in err_str or "429" in err_str or "resource_exhausted" in err_str:
+                raise RuntimeError("Gemini API rate limit or quota exceeded. Please try again later.")
+            elif "api_key" in err_str or "unauthorized" in err_str or "401" in err_str or "invalid" in err_str:
+                raise ValueError("Invalid or unauthorized Gemini API key.")
+            else:
+                raise RuntimeError(f"Gemini API request failed: {e}")

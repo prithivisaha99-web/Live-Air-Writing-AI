@@ -21,7 +21,7 @@ DEFAULT_SETTINGS = {
     "eraser_size": 30,
     "canvas_mode": "Camera Workspace",
     "gemini_api_key": "",
-    "gemini_model": "gemini-2.5-flash"
+    "gemini_model": "gemini-3.6-flash"
 }
 
 

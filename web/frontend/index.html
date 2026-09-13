@@ -146,8 +146,27 @@
           <button id="btn-ai-copy" class="btn-ai">📋 Copy Text</button>
         </div>
 
-        <!-- Transcribed & AI Result Output Textarea -->
-        <textarea id="txt-ai-output" class="ai-output-area" placeholder="Transcribed or processed AI text will appear here..."></textarea>
+        <!-- Active Writing Analysis Card -->
+        <div class="context-card" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: 10px; padding: 6px 8px; margin-top: 8px;">
+          <div style="font-size: 10px; font-weight: 700; color: #38BDF8; letter-spacing: 0.5px;">WRITING CONTEXT</div>
+          <div id="lbl-context-writing" style="font-size: 11px; font-weight: 700; color: #FFFFFF; margin-top: 2px;">Writing: (No text recognized yet)</div>
+          <div id="lbl-context-desc" style="font-size: 10px; color: #94A3B8; margin-top: 2px;">Description: Air-write and click 'Recognize Writing' to set context</div>
+        </div>
+
+        <!-- Chat Display Messages Area -->
+        <div id="chat-display-area" style="flex: 1; min-height: 140px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 8px; margin-top: 8px; overflow-y: auto; font-size: 11px; color: #E2E8F0;">
+          <div style="margin-bottom: 8px; text-align: left;">
+            <span style="background: rgba(168,85,247,0.15); color: #E2E8F0; padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(168,85,247,0.3);">
+              <b style="color: #A855F7;">🤖 AI:</b> 👋 Welcome! Air-write on your canvas and click <b>Recognize Writing</b> to start chatting about your writing!
+            </span>
+          </div>
+        </div>
+
+        <!-- Chat Input & Send Button -->
+        <div style="display: flex; gap: 6px; margin-top: 8px;">
+          <input type="text" id="txt-chat-input" placeholder="Ask something about your writing..." style="flex: 1; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 8px; padding: 6px 10px; color: #FFFFFF; font-size: 11px;">
+          <button id="btn-chat-send" style="background: #00F0FF; color: #0F172A; font-weight: 700; border: none; border-radius: 8px; padding: 6px 12px; font-size: 11px; cursor: pointer;">💬 Send</button>
+        </div>
       </aside>
     </main>
 

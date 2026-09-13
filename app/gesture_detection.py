@@ -15,9 +15,170 @@ class GestureType(enum.Enum):
     CLEAR = "CLEAR CANVAS"
 
 
+class ShortcutGesture(enum.Enum):
+    NONE = "NONE"
+    UNDO = "✌️ UNDO"
+    REDO = "🤟 REDO"
+    CONFIRM = "👍 CONFIRM"
+
+
 class GestureMode(enum.Enum):
     POINTING = "Pointing Index Finger"
     PINCH = "Pinch (Index + Thumb)"
+
+
+class ShortcutDetector:
+    """Separate layer for detecting gesture shortcuts (Undo, Redo, Confirm) with physical webcam tolerance, debouncing, and state latching."""
+
+    def __init__(self, debounce_frames: int = 4):
+        self.debounce_frames = debounce_frames
+        self.history = collections.deque(maxlen=debounce_frames)
+        self.latched_shortcut = ShortcutGesture.NONE
+        self.last_raw_candidate = ShortcutGesture.NONE
+        self.last_reason = "No hand detected"
+        self.last_finger_summary = "None"
+        self._evaluator = GestureDetector()
+
+    def detect_raw_shortcut(self, hand_data: dict | None, eval_data: dict | None = None) -> tuple[ShortcutGesture, str, str]:
+        """
+        Evaluates raw hand landmarks and relative finger geometry for shortcut candidates.
+        Returns: (candidate_shortcut, finger_summary_str, reason_str)
+        """
+        if not hand_data:
+            return ShortcutGesture.NONE, "No Hand", "No hand detected"
+
+        if eval_data is None:
+            eval_data = self._evaluator.evaluate_all_fingers(hand_data)
+
+        if not eval_data:
+            return ShortcutGesture.NONE, "No Hand", "Invalid hand landmark data"
+
+        landmarks = hand_data.get("landmarks", [])
+        pixels = hand_data.get("pixels", [])
+
+        idx_ext, idx_tr, idx_pr, idx_er = eval_data["Index"]
+        mid_ext, mid_tr, mid_pr, mid_er = eval_data["Middle"]
+        rng_ext, rng_tr, rng_pr, rng_er = eval_data["Ring"]
+        pnk_ext, pnk_tr, pnk_pr, pnk_er = eval_data["Pinky"]
+
+        # Characterize pinky state for webcam tolerance
+        if not pnk_ext:
+            pnk_str = "folded"
+        elif pnk_tr < max(idx_tr, mid_tr) - 0.03 or pnk_er < 1.15:
+            pnk_str = "noisy"
+        else:
+            pnk_str = "extended"
+
+        finger_summary = (
+            f"Index={'ext' if idx_ext else 'fold'} "
+            f"Middle={'ext' if mid_ext else 'fold'} "
+            f"Ring={'ext' if rng_ext else 'fold'} "
+            f"Pinky={pnk_str}"
+        )
+
+        # 1. 👍 CONFIRM: Main fingers (Index, Middle, Ring) folded & Thumb extended UP
+        if (not idx_ext) and (not mid_ext) and (not rng_ext):
+            thumb_up = False
+            if landmarks and len(landmarks) >= 21:
+                wrist_y = landmarks[0][1]
+                thumb_mcp_y = landmarks[2][1]
+                thumb_tip_y = landmarks[4][1]
+                thumb_up = (thumb_tip_y < thumb_mcp_y - 0.02) and (thumb_tip_y < wrist_y - 0.04)
+            elif pixels and len(pixels) >= 21:
+                wrist_y = pixels[0][1]
+                thumb_mcp_y = pixels[2][1]
+                thumb_tip_y = pixels[4][1]
+                thumb_up = (thumb_tip_y < thumb_mcp_y - 10) and (thumb_tip_y < wrist_y - 15)
+
+            if thumb_up:
+                return ShortcutGesture.CONFIRM, finger_summary, "Thumb-Up posture confirmed"
+
+        # 2. ✌️ UNDO: Index & Middle extended, Ring folded
+        # Allows Pinky to be folded or carry small webcam classification noise.
+        # Strict protection: Does NOT trigger on DRAW (Middle folded) or HOVER (Ring extended).
+        if idx_ext and mid_ext and (not rng_ext):
+            return ShortcutGesture.UNDO, finger_summary, "✌️ Two-finger pose detected (Index+Middle ext, Ring fold)"
+
+        # 3. 🤟 REDO: Index, Middle & Ring extended, Pinky folded/lower
+        # Strict protection: Does NOT trigger on Open Palm (Pinky fully extended).
+        if idx_ext and mid_ext and rng_ext:
+            if not pnk_ext or pnk_str == "noisy" or pnk_tr < rng_tr - 0.08:
+                return ShortcutGesture.REDO, finger_summary, "🤟 Three-finger pose detected (Index+Middle+Ring ext, Pinky fold/lower)"
+            else:
+                return ShortcutGesture.NONE, finger_summary, "Rejected: Open Palm (Pinky fully extended)"
+
+        # Reason categorization for diagnostic feedback
+        if idx_ext and not mid_ext:
+            reason = "Pointing/DRAW posture (Middle folded)"
+        elif idx_ext and mid_ext and rng_ext and pnk_ext:
+            reason = "Open Palm/HOVER posture"
+        elif not idx_ext and not mid_ext and not rng_ext and not pnk_ext:
+            reason = "Fist/ERASER posture"
+        else:
+            reason = "Unrecognized gesture pose"
+
+        return ShortcutGesture.NONE, finger_summary, reason
+
+    def update(self, hand_data: dict | None, eval_data: dict | None = None, is_drawing: bool = False) -> ShortcutGesture | None:
+        """
+        Updates shortcut detector state with debouncing and latching.
+        Returns ShortcutGesture ONLY when a NEW debounced shortcut triggers.
+        Returns None when no action should trigger.
+        """
+        if is_drawing:
+            self.history.clear()
+            self.latched_shortcut = ShortcutGesture.NONE
+            self.last_raw_candidate = ShortcutGesture.NONE
+            self.last_reason = "Disabled (Drawing Active)"
+            self.last_finger_summary = "Drawing"
+            return None
+
+        raw_candidate, finger_summary, reason = self.detect_raw_shortcut(hand_data, eval_data)
+        self.last_raw_candidate = raw_candidate
+        self.last_finger_summary = finger_summary
+
+        self.history.append(raw_candidate)
+        stable_count = sum(1 for g in self.history if g == raw_candidate and raw_candidate != ShortcutGesture.NONE)
+
+        if len(self.history) == self.debounce_frames and len(set(self.history)) == 1 and raw_candidate != ShortcutGesture.NONE:
+            debounced_candidate = raw_candidate
+        else:
+            debounced_candidate = ShortcutGesture.NONE
+
+        if debounced_candidate == ShortcutGesture.NONE:
+            if raw_candidate != ShortcutGesture.NONE:
+                self.last_reason = f"Debouncing {raw_candidate.value} ({stable_count}/{self.debounce_frames})"
+            else:
+                self.last_reason = reason
+
+            if raw_candidate == ShortcutGesture.NONE:
+                self.latched_shortcut = ShortcutGesture.NONE
+            return None
+
+        if debounced_candidate != self.latched_shortcut:
+            self.latched_shortcut = debounced_candidate
+            self.last_reason = f"TRIGGERED: {debounced_candidate.value}"
+            return debounced_candidate
+
+        self.last_reason = f"Latched ({debounced_candidate.value} held - release pose to re-arm)"
+        return None
+
+    def get_diagnostic_info(self) -> dict:
+        """Returns comprehensive diagnostic info for HUD/logging."""
+        stable_count = 0
+        if self.history:
+            most_common = collections.Counter(self.history).most_common(1)[0]
+            if most_common[0] != ShortcutGesture.NONE:
+                stable_count = most_common[1]
+
+        stable_str = f"{stable_count}/{self.debounce_frames}"
+        return {
+            "candidate": self.last_raw_candidate.value if self.last_raw_candidate else "NONE",
+            "finger_summary": self.last_finger_summary,
+            "stable_frames": stable_str,
+            "latched": self.latched_shortcut.value if self.latched_shortcut != ShortcutGesture.NONE else "None",
+            "reason": self.last_reason
+        }
 
 
 class GestureDetector:

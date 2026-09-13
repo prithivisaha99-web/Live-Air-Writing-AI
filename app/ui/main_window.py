@@ -15,7 +15,7 @@ from app.drawing_tools import UndoRedoManager
 from app.canvas import AirWritingCanvas, CanvasMode
 from app.ai_service import AIService
 from app.vision_worker import VisionWorkerThread
-from app.gesture_detection import GestureType, GestureMode
+from app.gesture_detection import GestureType, GestureMode, ShortcutGesture
 
 from app.ui.styles import DARK_FUTURISTIC_STYLE
 from app.ui.startup_screen import StartupScreen
@@ -41,7 +41,7 @@ class MainWindow(QMainWindow):
         self.undo_redo = UndoRedoManager()
         
         loaded_key = self.settings.get("gemini_api_key") or self.settings.get("openai_api_key", "")
-        loaded_model = self.settings.get("gemini_model", "gemini-2.5-flash")
+        loaded_model = self.settings.get("gemini_model", "gemini-3.6-flash")
         self.ai_service = AIService(
             api_key=loaded_key,
             model=loaded_model
@@ -192,7 +192,7 @@ class MainWindow(QMainWindow):
 
         # Right Side AI Assist Panel
         self.ai_panel = AIAssistPanel(self.ai_service, self.canvas, self)
-        self.ai_panel.setFixedWidth(310)
+        self.ai_panel.setFixedWidth(340)
 
         content_layout.addLayout(canvas_container, stretch=1)
         content_layout.addWidget(self.ai_panel)
@@ -290,7 +290,33 @@ class MainWindow(QMainWindow):
             self.lbl_fingertip_pos.setText("Index: (0, 0)")
 
         gesture_val = gesture.value if hasattr(gesture, "value") else str(gesture)
-        self.lbl_gesture_status.setText(f"GESTURE: {gesture_val}")
+        triggered_shortcut = data.get("triggered_shortcut")
+
+        if triggered_shortcut == ShortcutGesture.UNDO:
+            logger.info(f"[ShortcutDebug] MainWindow received={triggered_shortcut.name}")
+            undone_stroke = self.undo_redo.undo()
+            result_str = f"popped stroke ({len(undone_stroke.points)} pts)" if undone_stroke else "empty history"
+            logger.info(f"[ShortcutDebug] undo_called -> result: {result_str}")
+            logger.info("[ShortcutDebug] canvas_updated")
+            self.lbl_gesture_status.setText("SHORTCUT: ✌️ UNDO")
+            if hasattr(self.ai_panel, "show_shortcut_status"):
+                self.ai_panel.show_shortcut_status("✌️ Undo Action Triggered")
+        elif triggered_shortcut == ShortcutGesture.REDO:
+            logger.info(f"[ShortcutDebug] MainWindow received={triggered_shortcut.name}")
+            redone_stroke = self.undo_redo.redo()
+            result_str = f"restored stroke ({len(redone_stroke.points)} pts)" if redone_stroke else "empty redo stack"
+            logger.info(f"[ShortcutDebug] redo_called -> result: {result_str}")
+            logger.info("[ShortcutDebug] canvas_updated")
+            self.lbl_gesture_status.setText("SHORTCUT: 🤟 REDO")
+            if hasattr(self.ai_panel, "show_shortcut_status"):
+                self.ai_panel.show_shortcut_status("🤟 Redo Action Triggered")
+        elif triggered_shortcut == ShortcutGesture.CONFIRM:
+            logger.info(f"[ShortcutDebug] MainWindow received={triggered_shortcut.name}")
+            self.lbl_gesture_status.setText("SHORTCUT: 👍 CONFIRMED")
+            if hasattr(self.ai_panel, "show_shortcut_status"):
+                self.ai_panel.show_shortcut_status("👍 Action Confirmed!")
+        else:
+            self.lbl_gesture_status.setText(f"GESTURE: {gesture_val}")
 
     @Slot(str)
     def _on_camera_status_changed(self, status: str) -> None:
@@ -339,7 +365,7 @@ class MainWindow(QMainWindow):
     def _apply_settings_changes(self) -> None:
         # Update AI Service
         key_val = self.settings.get("gemini_api_key") or self.settings.get("openai_api_key", "")
-        model_val = self.settings.get("gemini_model", "gemini-2.5-flash")
+        model_val = self.settings.get("gemini_model", "gemini-3.6-flash")
         self.ai_service.set_api_key(key_val)
         self.ai_service.model = model_val
         self.ai_panel.update_api_status()
