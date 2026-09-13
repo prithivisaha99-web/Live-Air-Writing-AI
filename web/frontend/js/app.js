@@ -459,13 +459,16 @@ function initApp() {
 
   async function sendChatMessage() {
     const question = txtChatInput ? txtChatInput.value.trim() : '';
+    console.log('[AI CHAT] sendChatMessage called. Question:', question);
 
     if (!question) {
+      console.warn('[AI CHAT] Empty question provided.');
       appendChatMessage('assistant', '⚠️ Please type a question before clicking Send.', true);
       return;
     }
 
     // Append user question & clear input
+    console.log('[AI CHAT] Appending user message to chat UI...');
     appendChatMessage('user', question);
     if (txtChatInput) txtChatInput.value = '';
 
@@ -483,9 +486,11 @@ function initApp() {
         history: [...chatHistory]
       };
 
+      console.log('[AI CHAT] Sending POST /api/chat-writing payload:', payload);
       const responseText = await callAiApi('/api/chat-writing', payload);
       const answer = typeof responseText === 'string' ? responseText : (responseText.answer || responseText.result || 'No response text');
 
+      console.log('[AI CHAT] Received AI response:', answer);
       if (loadingMsgEl) loadingMsgEl.remove();
 
       appendChatMessage('assistant', answer, false);
@@ -620,18 +625,27 @@ function initApp() {
 
   // 6. Chat Input & Send Button Event Listeners
   if (btnChatSend) {
-    btnChatSend.addEventListener('click', () => {
+    console.log('[AI CHAT] Attaching click listener to #btn-chat-send');
+    btnChatSend.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('[AI CHAT] Send button click event triggered');
       sendChatMessage();
     });
+  } else {
+    console.warn('[AI CHAT] #btn-chat-send element not found in DOM during initApp()');
   }
 
   if (txtChatInput) {
-    txtChatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
+    console.log('[AI CHAT] Attaching keydown listener to #txt-chat-input');
+    txtChatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
+        console.log('[AI CHAT] Enter keydown event triggered in #txt-chat-input');
         sendChatMessage();
       }
     });
+  } else {
+    console.warn('[AI CHAT] #txt-chat-input element not found in DOM during initApp()');
   }
 }
 
