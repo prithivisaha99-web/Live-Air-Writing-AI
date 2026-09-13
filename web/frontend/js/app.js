@@ -465,15 +465,6 @@ function initApp() {
       return;
     }
 
-    const hasContext = Boolean(currentWriting || currentDescription);
-
-    if (!hasContext) {
-      appendChatMessage('user', question);
-      appendChatMessage('assistant', '⚠️ Write something on the canvas and click <b>Recognize Writing</b> first so I can answer questions about it.', true);
-      if (txtChatInput) txtChatInput.value = '';
-      return;
-    }
-
     // Append user question & clear input
     appendChatMessage('user', question);
     if (txtChatInput) txtChatInput.value = '';
@@ -486,8 +477,8 @@ function initApp() {
 
     try {
       const payload = {
-        writing: currentWriting,
-        description: currentDescription,
+        writing: currentWriting || '',
+        description: currentDescription || '',
         question: question,
         history: [...chatHistory]
       };
