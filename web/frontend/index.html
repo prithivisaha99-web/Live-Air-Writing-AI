@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Live Air Writing AI - Web</title>
-  <link rel="stylesheet" href="css/style.css?v=1.0.3">
-  <link rel="stylesheet" href="css/landing.css?v=1.0.3">
+  <link rel="stylesheet" href="css/style.css?v=1.0.4">
+  <link rel="stylesheet" href="css/landing.css?v=1.0.4">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0B0F17">
 </head>
@@ -147,7 +147,7 @@
         </div>
 
         <!-- Active Writing Analysis Card -->
-        <div class="context-card" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: 10px; padding: 6px 8px; margin-top: 8px;">
+        <div class="context-card">
           <div style="font-size: 10px; font-weight: 700; color: #38BDF8; letter-spacing: 0.5px;">WRITING CONTEXT</div>
           <div id="lbl-context-writing" style="font-size: 11px; font-weight: 700; color: #FFFFFF; margin-top: 2px;">Writing: (No text recognized yet)</div>
           <div id="lbl-context-desc" style="font-size: 10px; color: #94A3B8; margin-top: 2px;">Description: Air-write and click 'Recognize Writing' to set context</div>
@@ -163,9 +163,9 @@
         </div>
 
         <!-- Chat Input & Send Button -->
-        <div style="display: flex; gap: 6px; margin-top: 8px;">
-          <input type="text" id="txt-chat-input" placeholder="Ask something about your writing..." style="flex: 1; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 8px; padding: 6px 10px; color: #FFFFFF; font-size: 11px;">
-          <button type="button" id="btn-chat-send" style="background: #00F0FF; color: #0F172A; font-weight: 700; border: none; border-radius: 8px; padding: 6px 12px; font-size: 11px; cursor: pointer;">💬 Send</button>
+        <div class="chat-input-container">
+          <input type="text" id="txt-chat-input" placeholder="Ask something about your writing...">
+          <button type="button" id="btn-chat-send">💬 Send</button>
         </div>
       </aside>
     </main>
